@@ -1357,6 +1357,9 @@
     }
 
     function addVideoCard(title, desc, src, videoId, scrollToIt = true) {
+      if (src && src.includes("pixeldrain.com/u/")) {
+        src = src.replace("pixeldrain.com/u/", "pixeldrain.com/api/file/");
+      }
       const container = document.getElementById("videoGridContainer");
       const card = document.createElement("div");
       card.className = "video-card";
@@ -1496,6 +1499,12 @@
           title: "Exclusive Video #3",
           description: "NightHub Premium Feed",
           src: "https://files.catbox.moe/9e6nq1.mp4"
+        },
+        {
+          id: "vid_pixel_4",
+          title: "Exclusive Video #4 (HD)",
+          description: "NightHub Premium Feed (420MB HD)",
+          src: "https://pixeldrain.com/api/file/iLu5csU5"
         }
       ];
 
