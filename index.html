@@ -1438,6 +1438,12 @@
           let local = JSON.parse(localStorage.getItem("offline_videos") || "[]");
           local = local.filter(v => v.id !== vidId);
           localStorage.setItem("offline_videos", JSON.stringify(local));
+
+          let deleted = JSON.parse(localStorage.getItem("deleted_video_ids") || "[]");
+          if (!deleted.includes(vidId)) {
+            deleted.push(vidId);
+            localStorage.setItem("deleted_video_ids", JSON.stringify(deleted));
+          }
         } catch (e) {}
       }
 
@@ -1451,36 +1457,57 @@
     }
 
     async function loadSavedVideos() {
-      let loaded = false;
+      let serverVideos = [];
       try {
         const res = await fetch("/api/videos");
         if (res.ok) {
           const data = await res.json();
-          const list = Array.isArray(data) ? data : (data.videos || []);
-          if (list.length > 0) {
-            // Reverse so newest appears on top when prepend is used
-            const reversed = [...list].reverse();
-            reversed.forEach(v => {
-              addVideoCard(v.title, v.description, v.src, v.id, false);
-            });
-            loaded = true;
-          }
+          serverVideos = Array.isArray(data) ? data : (data.videos || []);
         }
       } catch (err) {
         console.warn("Server offline, checking offline storage", err);
       }
 
-      if (!loaded) {
-        try {
-          const local = JSON.parse(localStorage.getItem("offline_videos") || "[]");
-          if (Array.isArray(local) && local.length > 0) {
-            const reversed = [...local].reverse();
-            reversed.forEach(v => {
-              addVideoCard(v.title, v.description, v.src, v.id, false);
-            });
-          }
-        } catch (e) {}
+      let local = [];
+      let deleted = [];
+      try {
+        local = JSON.parse(localStorage.getItem("offline_videos") || "[]");
+        if (!Array.isArray(local)) local = [];
+        deleted = JSON.parse(localStorage.getItem("deleted_video_ids") || "[]");
+        if (!Array.isArray(deleted)) deleted = [];
+      } catch (e) {}
+
+      // Permanent videos available directly in GitHub Pages for all visitors
+      const defaultPermanentVideos = [
+        {
+          id: "vid_catbox_1",
+          title: "Exclusive Video #1",
+          description: "NightHub Premium Feed",
+          src: "https://files.catbox.moe/qhqudj.mp4"
+        }
+      ];
+
+      const allVideos = [];
+      const seenIds = new Set();
+      const seenSrcs = new Set();
+
+      function addIfNotPresent(v) {
+        if (!v || !v.src || !v.id) return;
+        if (deleted.includes(v.id)) return;
+        if (seenIds.has(v.id) || seenSrcs.has(v.src)) return;
+        seenIds.add(v.id);
+        seenSrcs.add(v.src);
+        allVideos.push(v);
       }
+
+      // Merge order: user offline first, then server, then permanent defaults
+      local.forEach(addIfNotPresent);
+      serverVideos.forEach(addIfNotPresent);
+      defaultPermanentVideos.forEach(addIfNotPresent);
+
+      allVideos.forEach(v => {
+        addVideoCard(v.title, v.description, v.src, v.id, false);
+      });
 
       checkEmptyGallery();
     }
