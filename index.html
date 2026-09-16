@@ -1356,7 +1356,7 @@
       return str.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
     }
 
-    function addVideoCard(title, desc, src, videoId, scrollToIt = true) {
+    function addVideoCard(title, desc, src, videoId, scrollToIt = true, prepend = false) {
       if (src && src.includes("pixeldrain.com/u/")) {
         src = src.replace("pixeldrain.com/u/", "pixeldrain.com/api/file/");
       }
@@ -1387,7 +1387,9 @@
               </div>
             </div>
           </div>
-          <video controls controlsList="nodownload" preload="metadata" playsinline src="${src}">
+          <video controls controlsList="nodownload" preload="metadata" playsinline referrerpolicy="no-referrer">
+            <source src="${src}" type="video/mp4">
+            <source src="${src}" type="video/x-m4v">
             <source src="${src}">
             Your browser does not support the video tag.
           </video>
@@ -1402,7 +1404,11 @@
       const emptyMsg = document.getElementById("emptyGalleryMsg");
       if (emptyMsg) emptyMsg.style.display = "none";
 
-      container.prepend(card);
+      if (prepend) {
+        container.prepend(card);
+      } else {
+        container.appendChild(card);
+      }
       updateCardIndexes();
 
       const video = card.querySelector("video");
