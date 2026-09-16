@@ -3,6 +3,9 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+  <meta http-equiv="Pragma" content="no-cache">
+  <meta http-equiv="Expires" content="0">
   <title>NightHub 18+</title>
 
   <style>
@@ -1539,13 +1542,19 @@
         allVideos.push(v);
       }
 
-      // Merge order: user offline first, then server, then permanent defaults
+      // Permanent default videos always show first
+      defaultPermanentVideos.forEach(v => {
+        if (v && v.src && v.id) {
+          seenIds.add(v.id);
+          seenSrcs.add(v.src);
+          allVideos.push(v);
+        }
+      });
       local.forEach(addIfNotPresent);
       serverVideos.forEach(addIfNotPresent);
-      defaultPermanentVideos.forEach(addIfNotPresent);
 
       allVideos.forEach(v => {
-        addVideoCard(v.title, v.description, v.src, v.id, false);
+        addVideoCard(v.title, v.description, v.src, v.id, false, false);
       });
 
       checkEmptyGallery();
