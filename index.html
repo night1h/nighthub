@@ -1485,6 +1485,7 @@
       try {
         local = JSON.parse(localStorage.getItem("offline_videos") || "[]");
         if (!Array.isArray(local)) local = [];
+        local = local.filter(v => v && v.src && !v.src.includes("pixeldrain.com"));
         deleted = JSON.parse(localStorage.getItem("deleted_video_ids") || "[]");
         if (!Array.isArray(deleted)) deleted = [];
       } catch (e) {}
@@ -1508,24 +1509,6 @@
           title: "Exclusive Video #3",
           description: "NightHub Premium Feed",
           src: "https://files.catbox.moe/9e6nq1.mp4"
-        },
-        {
-          id: "vid_pixel_4",
-          title: "Exclusive Video #4 (HD)",
-          description: "NightHub Premium Feed (420MB HD)",
-          src: "https://pixeldrain.com/api/file/iLu5csU5"
-        },
-        {
-          id: "vid_pixel_5",
-          title: "Exclusive Video #5 (HD)",
-          description: "NightHub Premium Feed",
-          src: "https://pixeldrain.com/api/file/8nR8YMUN"
-        },
-        {
-          id: "vid_pixel_6",
-          title: "Exclusive Video #6 (HD)",
-          description: "NightHub Premium Feed",
-          src: "https://pixeldrain.com/api/file/qdWVnJ9G"
         }
       ];
 
