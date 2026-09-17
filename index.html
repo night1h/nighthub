@@ -563,6 +563,53 @@
       font-size: 13px;
     }
 
+    /* Pagination controls */
+    .pagination-container {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      gap: 10px;
+      margin: 30px auto 40px auto;
+      padding: 10px;
+      flex-wrap: wrap;
+      user-select: none;
+    }
+
+    .pagination-btn {
+      background: #1e1e1e;
+      color: #fff;
+      border: 1px solid #3a3a3a;
+      padding: 8px 16px;
+      border-radius: 8px;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.2s, border-color 0.2s, transform 0.1s;
+    }
+
+    .pagination-btn:hover:not(:disabled) {
+      background: #e91e63;
+      border-color: #e91e63;
+      transform: translateY(-1px);
+    }
+
+    .pagination-btn.active {
+      background: #e91e63;
+      border-color: #e91e63;
+      color: #fff;
+    }
+
+    .pagination-btn:disabled {
+      opacity: 0.35;
+      cursor: not-allowed;
+    }
+
+    .pagination-info {
+      color: #888;
+      font-size: 13px;
+      margin: 0 6px;
+    }
+
     footer {
       text-align: center;
       padding: 25px;
@@ -1039,6 +1086,13 @@
           <p style="font-size: 0.9rem;">Log in as Owner to upload your first video.</p>
         </div>
       </div>
+
+      <!-- Pagination Bar -->
+      <div class="pagination-container" id="paginationContainer" style="display: none;">
+        <button class="pagination-btn" id="prevPageBtn" onclick="changePage(-1)">← Предишна</button>
+        <div id="pageNumbersContainer" style="display: inline-flex; gap: 6px;"></div>
+        <button class="pagination-btn" id="nextPageBtn" onclick="changePage(1)">Следваща →</button>
+      </div>
     </section>
 
     <!-- Floating Feed Navigator -->
@@ -1475,6 +1529,8 @@
       if (scrollToIt) {
         card.scrollIntoView({ behavior: "smooth", block: "center" });
       }
+      renderPagination();
+    }
     }
 
     /* Reactions system (Likes / Dislikes) */
@@ -1616,6 +1672,7 @@
       card.remove();
       updateCardIndexes();
       checkEmptyGallery();
+      renderPagination();
     }
 
     async function loadSavedVideos() {
@@ -1774,12 +1831,94 @@
       });
 
       checkEmptyGallery();
+      renderPagination();
     }
 
     window.addEventListener("DOMContentLoaded", () => {
       loadSavedVideos();
       updateOwnerUI();
     });
+
+    /* Pagination state & logic (10 videos per page) */
+    const VIDEOS_PER_PAGE = 10;
+    let currentPage = 1;
+
+    function renderPagination() {
+      const searchInput = document.getElementById("videoSearchInput");
+      const isSearching = searchInput && searchInput.value.trim().length > 0;
+      const paginationBox = document.getElementById("paginationContainer");
+      const prevBtn = document.getElementById("prevPageBtn");
+      const nextPageBtn = document.getElementById("nextPageBtn");
+      const numbersContainer = document.getElementById("pageNumbersContainer");
+
+      const cards = Array.from(document.querySelectorAll("#videoGridContainer .video-card"));
+
+      if (!paginationBox || !numbersContainer) return;
+
+      // When searching, let the filter handle display directly and hide pagination
+      if (isSearching) {
+        paginationBox.style.display = "none";
+        return;
+      }
+
+      const totalVideos = cards.length;
+      const totalPages = Math.max(1, Math.ceil(totalVideos / VIDEOS_PER_PAGE));
+
+      if (currentPage > totalPages) currentPage = totalPages;
+      if (currentPage < 1) currentPage = 1;
+
+      // Show/hide cards for current page
+      const startIdx = (currentPage - 1) * VIDEOS_PER_PAGE;
+      const endIdx = startIdx + VIDEOS_PER_PAGE;
+
+      cards.forEach((card, idx) => {
+        if (idx >= startIdx && idx < endIdx) {
+          card.style.display = "flex";
+        } else {
+          card.style.display = "none";
+          // pause if currently playing and hidden
+          const vid = card.querySelector("video");
+          if (vid && !vid.paused) vid.pause();
+        }
+      });
+
+      if (totalPages <= 1) {
+        paginationBox.style.display = "none";
+        return;
+      }
+
+      paginationBox.style.display = "flex";
+      prevBtn.disabled = currentPage === 1;
+      nextPageBtn.disabled = currentPage === totalPages;
+
+      // Render page number buttons
+      numbersContainer.innerHTML = "";
+      for (let p = 1; p <= totalPages; p++) {
+        const btn = document.createElement("button");
+        btn.className = `pagination-btn ${p === currentPage ? "active" : ""}`;
+        btn.textContent = p;
+        btn.onclick = () => goToPage(p);
+        numbersContainer.appendChild(btn);
+      }
+    }
+
+    function changePage(direction) {
+      currentPage += direction;
+      renderPagination();
+      const videoSection = document.getElementById("videos");
+      if (videoSection) {
+        videoSection.scrollIntoView({ behavior: "smooth", block: "start" });
+      }
+    }
+
+    function goToPage(page) {
+      currentPage = page;
+      renderPagination();
+      const videoSection = document.getElementById("videos");
+      if (videoSection) {
+        videoSection.scrollIntoView({ behavior: "smooth", block: "start" });
+      }
+    }
 
     function checkEmptyGallery() {
       const cards = document.querySelectorAll("#videoGridContainer .video-card");
@@ -1884,6 +2023,14 @@
       let visibleCount = 0;
 
       clearBtn.style.display = query.length > 0 ? "block" : "none";
+
+      if (query.length === 0) {
+        renderPagination();
+        return;
+      }
+
+      const paginationBox = document.getElementById("paginationContainer");
+      if (paginationBox) paginationBox.style.display = "none";
 
       cards.forEach(card => {
         const title = card.querySelector("h3") ? card.querySelector("h3").textContent.toLowerCase() : "";
