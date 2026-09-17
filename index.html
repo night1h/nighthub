@@ -107,6 +107,7 @@
       padding: 30px 4% 80px;
       max-width: 860px;
       margin: 0 auto;
+      scroll-margin-top: 75px;
     }
 
     .video-header {
@@ -1129,9 +1130,14 @@
 
     function goToVideos(event) {
       if (event) event.preventDefault();
-      const videoSection = document.getElementById("videos");
-      if (videoSection) {
-        videoSection.scrollIntoView({ behavior: "smooth", block: "start" });
+      const firstCard = document.querySelector("#videoGridContainer .video-card");
+      if (firstCard && firstCard.style.display !== "none") {
+        firstCard.scrollIntoView({ behavior: "smooth", block: "start" });
+      } else {
+        const videoSection = document.getElementById("videos");
+        if (videoSection) {
+          videoSection.scrollIntoView({ behavior: "smooth", block: "start" });
+        }
       }
     }
 
