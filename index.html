@@ -1131,7 +1131,32 @@
     © 2026 NightHub — All rights reserved.
   </footer>
 
+  <!-- Firebase App & Firestore SDKs (Compat version for browser) -->
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+
   <script>
+    /* Firebase Initialization */
+    const firebaseConfig = {
+      apiKey: "AIzaSyBkmaUtMvqCJ2_RyJ2_fVYJtYLxjAuaa08",
+      authDomain: "nighhub.firebaseapp.com",
+      projectId: "nighhub",
+      storageBucket: "nighhub.firebasestorage.app",
+      messagingSenderId: "363696455233",
+      appId: "1:363696455233:web:c84d9b43f0b35f02ce10c0",
+      measurementId: "G-BVB71BV12E"
+    };
+
+    let db = null;
+    let liveReactionsCache = {};
+
+    try {
+      firebase.initializeApp(firebaseConfig);
+      db = firebase.firestore();
+      console.log("Firebase initialized successfully");
+    } catch (err) {
+      console.warn("Firebase initialization failed:", err);
+    }
     const overlay = document.getElementById("ageOverlay");
 
     try {
@@ -1559,8 +1584,11 @@
       renderPagination();
     }
 
-    /* Reactions system (Likes / Dislikes) */
+    /* Reactions system (Likes / Dislikes with Firestore Realtime Sync) */
     function getStoredReactions() {
+      if (Object.keys(liveReactionsCache).length > 0) {
+        return liveReactionsCache;
+      }
       try {
         return JSON.parse(localStorage.getItem("video_reactions") || "{}");
       } catch (e) {
@@ -1569,6 +1597,7 @@
     }
 
     function saveStoredReactions(data) {
+      liveReactionsCache = data;
       try {
         localStorage.setItem("video_reactions", JSON.stringify(data));
       } catch (e) {
@@ -1613,6 +1642,44 @@
       }
     }
 
+    // Realtime sync from Firestore
+    function listenToReactions() {
+      if (!db) return;
+      try {
+        db.collection("reactions").onSnapshot((snapshot) => {
+          snapshot.forEach((doc) => {
+            const data = doc.data();
+            liveReactionsCache[doc.id] = {
+              likes: Math.max(0, Number(data.likes) || 0),
+              dislikes: Math.max(0, Number(data.dislikes) || 0)
+            };
+          });
+          saveStoredReactions(liveReactionsCache);
+          document.querySelectorAll(".video-card").forEach((card) => {
+            const vidId = card.getAttribute("data-id");
+            if (vidId) renderCardReactions(card, vidId);
+          });
+        }, (error) => {
+          console.warn("Firestore listen error:", error);
+        });
+      } catch (e) {
+        console.warn("Could not attach firestore listener:", e);
+      }
+    }
+
+    async function syncReactionToFirestore(vidId, likesDelta, dislikesDelta) {
+      if (!db || !vidId) return;
+      try {
+        const ref = db.collection("reactions").doc(vidId);
+        await ref.set({
+          likes: firebase.firestore.FieldValue.increment(likesDelta),
+          dislikes: firebase.firestore.FieldValue.increment(dislikesDelta)
+        }, { merge: true });
+      } catch (e) {
+        console.warn("Firestore sync error:", e);
+      }
+    }
+
     function toggleReaction(btn, type) {
       const card = btn.closest(".video-card");
       if (!card) return;
@@ -1627,27 +1694,35 @@
       }
 
       const currentVote = userVotes[vidId] || null;
+      let likesDelta = 0;
+      let dislikesDelta = 0;
 
       if (currentVote === type) {
         // Toggle off
         if (type === "like") {
           allReactions[vidId].likes = Math.max(0, (allReactions[vidId].likes || 0) - 1);
+          likesDelta = -1;
         } else {
           allReactions[vidId].dislikes = Math.max(0, (allReactions[vidId].dislikes || 0) - 1);
+          dislikesDelta = -1;
         }
         delete userVotes[vidId];
       } else {
         // Switching or new vote
         if (currentVote === "like") {
           allReactions[vidId].likes = Math.max(0, (allReactions[vidId].likes || 0) - 1);
+          likesDelta -= 1;
         } else if (currentVote === "dislike") {
           allReactions[vidId].dislikes = Math.max(0, (allReactions[vidId].dislikes || 0) - 1);
+          dislikesDelta -= 1;
         }
 
         if (type === "like") {
           allReactions[vidId].likes = (allReactions[vidId].likes || 0) + 1;
+          likesDelta += 1;
         } else {
           allReactions[vidId].dislikes = (allReactions[vidId].dislikes || 0) + 1;
+          dislikesDelta += 1;
         }
         userVotes[vidId] = type;
       }
@@ -1655,6 +1730,9 @@
       saveStoredReactions(allReactions);
       saveUserVotes(userVotes);
       renderCardReactions(card, vidId);
+
+      // Push delta directly to Firestore in cloud
+      syncReactionToFirestore(vidId, likesDelta, dislikesDelta);
     }
 
     async function deleteVideoCard(btn) {
@@ -1977,6 +2055,7 @@
     window.addEventListener("DOMContentLoaded", () => {
       loadSavedVideos();
       updateOwnerUI();
+      listenToReactions();
     });
 
     /* Pagination state & logic (10 videos per page) */
