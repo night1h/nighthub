@@ -2057,6 +2057,7 @@
         addVideoCard(v.title, v.description, v.src, v.id, false);
       });
 
+      updateCardIndexes();
       checkEmptyGallery();
       renderPagination();
     }
@@ -2159,9 +2160,11 @@
     function updateCardIndexes() {
       const cards = document.querySelectorAll("#videoGridContainer .video-card");
       cards.forEach((card, idx) => {
+        const num = idx + 1;
+        card.setAttribute("data-index", num);
         const tag = card.querySelector(".card-index-tag");
         if (tag) {
-          tag.textContent = `Video #${idx + 1}`;
+          tag.textContent = `Video #${num}`;
         }
       });
     }
@@ -2243,7 +2246,8 @@
 
     /* Live Search */
     function filterVideos() {
-      const query = document.getElementById("videoSearchInput").value.toLowerCase().trim();
+      const rawQuery = document.getElementById("videoSearchInput").value.trim();
+      const query = rawQuery.toLowerCase();
       const clearBtn = document.getElementById("clearSearchBtn");
       const cards = document.querySelectorAll("#videoGridContainer .video-card");
       const noResultsMsg = document.getElementById("noResultsMsg");
@@ -2260,11 +2264,27 @@
       const paginationBox = document.getElementById("paginationContainer");
       if (paginationBox) paginationBox.style.display = "none";
 
+      const numMatch = query.match(/^\s*#?(\d+)\s*$/);
+      const targetExactNum = numMatch ? numMatch[1] : null;
+
       cards.forEach(card => {
+        const cardIndex = card.getAttribute("data-index") || "";
+        const tag = card.querySelector(".card-index-tag") ? card.querySelector(".card-index-tag").textContent.toLowerCase() : "";
         const title = card.querySelector("h3") ? card.querySelector("h3").textContent.toLowerCase() : "";
         const desc = card.querySelector("p") ? card.querySelector("p").textContent.toLowerCase() : "";
 
-        if (title.includes(query) || desc.includes(query)) {
+        let match = false;
+
+        // If user types just a number (e.g. "4" or "#4"), match ONLY that exact video number!
+        if (targetExactNum) {
+          if (cardIndex === targetExactNum) {
+            match = true;
+          }
+        } else if (tag.includes(query) || title.includes(query) || desc.includes(query)) {
+          match = true;
+        }
+
+        if (match) {
           card.style.display = "flex";
           visibleCount++;
         } else {
