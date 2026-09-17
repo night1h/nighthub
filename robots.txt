@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://night1h.github.io/nighthub/sitemap.xml
