@@ -1671,10 +1671,19 @@
       if (!db || !vidId) return;
       try {
         const ref = db.collection("reactions").doc(vidId);
-        await ref.set({
-          likes: firebase.firestore.FieldValue.increment(likesDelta),
-          dislikes: firebase.firestore.FieldValue.increment(dislikesDelta)
-        }, { merge: true });
+        await db.runTransaction(async (transaction) => {
+          const doc = await transaction.get(ref);
+          let currentLikes = 0;
+          let currentDislikes = 0;
+          if (doc.exists) {
+            const d = doc.data();
+            currentLikes = Math.max(0, Number(d.likes) || 0);
+            currentDislikes = Math.max(0, Number(d.dislikes) || 0);
+          }
+          const newLikes = Math.max(0, currentLikes + likesDelta);
+          const newDislikes = Math.max(0, currentDislikes + dislikesDelta);
+          transaction.set(ref, { likes: newLikes, dislikes: newDislikes }, { merge: true });
+        });
       } catch (e) {
         console.warn("Firestore sync error:", e);
       }
