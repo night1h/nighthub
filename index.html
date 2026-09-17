@@ -1472,7 +1472,6 @@
       card.innerHTML = `
         <div class="video-card-topbar">
           <span class="card-index-tag">Video</span>
-          <span class="card-headline">${escapeHtml(title)}</span>
           <span style="color: #888; font-size: 12px;">Full View</span>
         </div>
         <div class="video-player-box">
@@ -1497,8 +1496,7 @@
           </video>
         </div>
         <div class="video-info">
-          <h3>${escapeHtml(title)}</h3>
-          <p>NightHub Premium</p>
+          <p style="font-weight: 600; font-size: 16px; color: #fff; margin-bottom: 8px;">NightHub Premium</p>
           <div class="video-actions">
             <button class="reaction-btn like-btn" onclick="toggleReaction(this, 'like')">
               <span class="reaction-icon">👍</span>
