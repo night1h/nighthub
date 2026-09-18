@@ -2156,10 +2156,10 @@
         allVideos.push(v);
       }
 
-      // Merge order: user offline first, then server, then permanent defaults
-      local.forEach(addIfNotPresent);
-      serverVideos.forEach(addIfNotPresent);
-      defaultPermanentVideos.forEach(addIfNotPresent);
+      // Merge order: newest first (reverse chronological)
+      local.slice().reverse().forEach(addIfNotPresent);
+      serverVideos.slice().reverse().forEach(addIfNotPresent);
+      defaultPermanentVideos.slice().reverse().forEach(addIfNotPresent);
 
       allVideos.forEach(v => {
         addVideoCard(v.title, v.description, v.src, v.id, false);
