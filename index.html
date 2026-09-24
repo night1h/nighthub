@@ -1544,8 +1544,7 @@
               </div>
             </div>
           </div>
-          <video controls controlsList="nodownload" preload="metadata" playsinline>
-            <source src="${src}" type="video/mp4">
+          <video controls controlsList="nodownload" preload="none" playsinline data-src="${src}">
             Your browser does not support the video tag.
           </video>
         </div>
@@ -2339,6 +2338,11 @@
         }
       });
 
+      // Lazy load only the 10 videos on the current active page
+      if (typeof loadVisiblePageVideos === "function") {
+        loadVisiblePageVideos();
+      }
+
       if (totalPages <= 1) {
         paginationBox.style.display = "none";
         return;
@@ -2417,23 +2421,51 @@
       }
     }
 
-    // Auto-pause video when scrolled away
+    // Lazy-load and auto-pause video when scrolled away
     const scrollVideoObserver = new IntersectionObserver((entries) => {
       entries.forEach(entry => {
         const video = entry.target;
-        if (!entry.isIntersecting || entry.intersectionRatio < 0.35) {
+        if (entry.isIntersecting) {
+          // Lazy load video source on demand
+          const dataSrc = video.getAttribute("data-src");
+          if (dataSrc && !video.getAttribute("src")) {
+            video.src = dataSrc;
+            video.load();
+          }
+        } else if (entry.intersectionRatio < 0.35) {
           if (!video.paused) {
             video.pause();
           }
         }
       });
     }, {
+      rootMargin: "250px 0px",
       threshold: [0, 0.35, 0.7]
     });
+
+    function loadVisiblePageVideos() {
+      const activeVideos = document.querySelectorAll("#videoGridContainer .video-card:not([style*='display: none']) video");
+      activeVideos.forEach(video => {
+        const dataSrc = video.getAttribute("data-src");
+        if (dataSrc && !video.getAttribute("src")) {
+          video.src = dataSrc;
+          video.load();
+        }
+      });
+    }
 
     function observeVideo(video) {
       if (!video) return;
       scrollVideoObserver.observe(video);
+
+      // Seek slightly into the video on loadedmetadata so that a clear preview frame displays
+      video.addEventListener("loadedmetadata", () => {
+        if (video.currentTime === 0) {
+          try {
+            video.currentTime = 0.1;
+          } catch (e) {}
+        }
+      }, { once: true });
 
       // Single active playback: pause other playing videos
       video.addEventListener("play", () => {
@@ -2519,6 +2551,10 @@
           card.style.display = "none";
         }
       });
+
+      if (typeof loadVisiblePageVideos === "function") {
+        loadVisiblePageVideos();
+      }
 
       if (cards.length === 0) {
         if (emptyMsg) emptyMsg.style.display = "block";
